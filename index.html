@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StarClicker — заработайте свои первые Telegram Stars</title>
+<meta name="description" content="StarClicker — простой способ заработать Telegram Stars: кликайте, приглашайте друзей и выводите звёзды на свой аккаунт.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0e14;
+    --surface: #15161d;
+    --surface-2: #1b1d26;
+    --border: rgba(255,255,255,0.07);
+    --text: #e8e9ee;
+    --muted: #8a8d9c;
+    --accent: #f5b942;
+    --accent-soft: rgba(245,185,66,0.12);
+    --danger: #e05d5d;
+    --success: #5dc98a;
+    --radius: 14px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  .app {
+    width: 100%;
+    max-width: 440px;
+    padding: 0 20px 32px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ---------- header ---------- */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 0 6px;
+  }
+  .brand { display: flex; align-items: center; gap: 9px; font-weight: 600; font-size: 15px; letter-spacing: -0.2px; }
+  .brand svg { display: block; }
+  .badge {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 5px 10px;
+  }
+
+  .tg-user {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 10px 4px 4px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface);
+    cursor: default;
+  }
+  .tg-user.visible { display: flex; }
+  .tg-user img {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: var(--surface-2);
+    object-fit: cover;
+  }
+  .tg-user .avatar-fallback {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #2aabe4, #1c7fb0);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: #fff;
+  }
+  .tg-user span { font-size: 13px; font-weight: 600; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* login screen */
+  .login-card {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin-top: 12vh;
+    padding: 0 8px;
+    width: 100%;
+  }
+  .login-card.visible { display: flex; }
+  .login-card .hero-star { width: 76px; height: 76px; filter: drop-shadow(0 14px 34px rgba(245,185,66,0.3)); margin-bottom: 22px; }
+  .login-card h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.5px; }
+  .login-card .sub { font-size: 14px; color: var(--muted); line-height: 1.55; margin: 10px 0 26px; max-width: 300px; }
+  .login-perks { display: flex; flex-direction: column; gap: 8px; margin-bottom: 28px; }
+  .perk {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 11px 14px;
+    font-size: 13.5px; text-align: left; width: 300px; max-width: 88vw;
+  }
+  .perk svg { width: 17px; height: 17px; flex-shrink: 0; }
+  .login-note { font-size: 11.5px; color: var(--muted); margin-top: 16px; max-width: 300px; line-height: 1.5; }
+  .app.locked { display: none; }
+  .tg-loading { display: none; font-size: 13px; color: var(--muted); margin-top: 14px; }
+  .tg-loading.visible { display: block; }
+
+  /* ---------- balance card ---------- */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-top: 16px;
+  }
+  .balance-card {
+    padding: 22px 22px 18px;
+    text-align: center;
+    background: linear-gradient(180deg, var(--surface-2), var(--surface));
+  }
+  .balance-card .label {
+    font-size: 12px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 500;
+  }
+  .balance-value {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 40px;
+    font-weight: 700;
+    letter-spacing: -1px;
+    margin-top: 6px;
+    font-variant-numeric: tabular-nums;
+  }
+  .balance-value svg { width: 30px; height: 30px; flex-shrink: 0; }
+  .balance-sub { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+
+  .mini-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    border-top: 1px solid var(--border);
+    margin-top: 16px;
+    padding-top: 14px;
+    gap: 8px;
+  }
+  .mini { text-align: center; }
+  .mini b { display: block; font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .mini span { font-size: 11px; color: var(--muted); }
+
+  /* ---------- clicker ---------- */
+  .clicker-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 28px 0 8px;
+    position: relative;
+  }
+  #starBtn {
+    width: 190px;
+    height: 190px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.1s ease;
+    filter: drop-shadow(0 12px 30px rgba(245,185,66,0.28));
+  }
+  #starBtn:active { transform: scale(0.93); }
+  #starBtn svg { width: 100%; height: 100%; }
+  .click-hint { font-size: 12.5px; color: var(--muted); margin-top: 14px; }
+
+  .pop {
+    position: fixed;
+    pointer-events: none;
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--accent);
+    z-index: 20;
+    animation: rise 0.7s ease-out forwards;
+    font-variant-numeric: tabular-nums;
+  }
+  @keyframes rise {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(-64px); }
+  }
+
+  /* ---------- buttons ---------- */
+  .actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 22px;
+  }
+  .btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 13px 16px;
+    border-radius: 12px;
+    border: 1px solid transparent;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.15s, opacity 0.15s;
+  }
+  .btn svg { width: 17px; height: 17px; }
+  .btn-primary { background: var(--accent); color: #1c1608; }
+  .btn-primary:hover { background: #f8c65e; }
+  .btn-primary:disabled { opacity: 0.4; cursor: default; }
+  .btn-ghost { background: var(--surface); border-color: var(--border); color: var(--text); }
+  .btn-ghost:hover { background: var(--surface-2); }
+
+  /* ---------- how it works ---------- */
+  .section { margin-top: 28px; }
+  .section-title { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 12px; }
+  .steps { display: flex; flex-direction: column; gap: 8px; }
+  .step {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+  }
+  .step-num {
+    width: 26px; height: 26px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .step b { font-size: 14px; font-weight: 600; display: block; margin-bottom: 2px; }
+  .step p { font-size: 13px; color: var(--muted); line-height: 1.45; }
+
+  /* ---------- modal ---------- */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(5,6,10,0.7);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .overlay.open { opacity: 1; pointer-events: auto; }
+  .sheet {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 20px 20px 0 0;
+    width: 100%;
+    max-width: 440px;
+    padding: 24px 22px calc(24px + env(safe-area-inset-bottom));
+    transform: translateY(30px);
+    transition: transform 0.25s ease;
+  }
+  .overlay.open .sheet { transform: translateY(0); }
+  @media (min-width: 500px) {
+    .overlay { align-items: center; padding: 20px; }
+    .sheet { border-radius: 20px; }
+  }
+  .sheet-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .sheet h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
+  .sheet-x {
+    width: 30px; height: 30px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.06);
+    color: var(--muted);
+    font-size: 16px;
+    cursor: pointer;
+  }
+  .sheet-x:hover { background: rgba(255,255,255,0.1); color: var(--text); }
+  .sheet p { font-size: 13.5px; color: var(--muted); line-height: 1.5; margin-bottom: 16px; }
+
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 12.5px; font-weight: 500; color: var(--muted); margin-bottom: 6px; }
+  .field input {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 11px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .field input:focus { border-color: rgba(245,185,66,0.5); }
+  .field-hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+  .ref-box {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+  }
+  .ref-box input {
+    flex: 1;
+    min-width: 0;
+    padding: 12px 14px;
+    border-radius: 11px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+    -webkit-user-select: text;
+    user-select: text;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .withdraw-summary {
+    display: flex;
+    justify-content: space-between;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    padding: 13px 14px;
+    font-size: 13.5px;
+    margin-bottom: 14px;
+  }
+  .withdraw-summary b { font-variant-numeric: tabular-nums; }
+
+  .form-error { font-size: 12.5px; color: var(--danger); min-height: 18px; margin: 2px 0 10px; }
+
+  /* ---------- toast ---------- */
+  #toast {
+    position: fixed;
+    left: 50%;
+    bottom: 28px;
+    transform: translateX(-50%) translateY(16px);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 13.5px;
+    padding: 12px 18px;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.45);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s, transform 0.2s;
+    z-index: 200;
+    max-width: calc(100% - 40px);
+    text-align: center;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #toast.success { border-color: rgba(93,201,138,0.35); }
+
+  footer {
+    margin-top: 32px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.5;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<!-- login screen -->
+<div class="login-card" id="loginScreen">
+  <svg class="hero-star" viewBox="0 0 24 24"><path fill="url(#g1)" d="M12 1.5l3.1 6.7 7.3.85-5.4 5 1.5 7.2L12 17.6l-6.5 3.65 1.5-7.2-5.4-5 7.3-.85L12 1.5z"/></svg>
+  <h1>StarClicker</h1>
+  <p class="sub">Зарабатывайте Telegram Stars за активность и приглашения — прямо в Telegram.</p>
+  <div class="login-perks">
+    <div class="perk">
+      <svg viewBox="0 0 24 24" fill="var(--accent)"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.2 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8L12 2z"/></svg>
+      0,01 звёзды за каждое нажатие
+    </div>
+    <div class="perk">
+      <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="7" r="4"/><path d="M2 21v-1a7 7 0 0 1 14 0v1"/><path d="M16 3.5a4 4 0 0 1 0 7"/></svg>
+      5 звёзд за каждого приглашённого друга
+    </div>
+    <div class="perk">
+      <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+      Вывод на аккаунт от 25 звёзд
+    </div>
+  </div>
+  <button class="btn btn-primary" id="tgLoginBtn" style="width:300px;max-width:88vw;padding:14px">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.9 4.1c-.3-.3-.8-.4-1.2-.2L3.1 11.2c-.5.2-.8.7-.8 1.2s.3 1 .8 1.2l4.3 1.4 1.6 5.1c.1.5.6.8 1.1.8.4 0 .8-.2 1-.6l2.2-3.2 4.3 3.2c.2.2.5.2.7.2.1 0 .3 0 .4-.1.4-.1.7-.4.7-.8l2.4-14.2c.1-.4-.1-.9-.4-1.1zM10.2 13.9l6.3-6-5.2 6.7c-.1.1-.1.2-.2.3l-.3 1.9-.6-2.9z"/></svg>
+    Продолжить с Telegram
+  </button>
+  <div id="tgWidgetWrap" style="min-height:1px"></div>
+  <div class="tg-loading" id="tgLoading">Подключение к Telegram…</div>
+  <p class="login-note">Вход выполняется через официальный Telegram. Мы получаем только ваше имя, username и ID — без доступа к переписке.</p>
+</div>
+
+<!-- app -->
+<div class="app locked" id="app">
+
+  <div class="topbar">
+    <div class="brand">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--accent)"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.2 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8L12 2z"/></svg>
+      StarClicker
+    </div>
+    <div class="tg-user" id="tgUserChip">
+      <span class="avatar-fallback" id="tgAvatar">?</span>
+      <span id="tgName"></span>
+    </div>
+    <div class="badge" id="tgBadge">Telegram Stars</div>
+  </div>
+
+  <div class="card balance-card">
+    <div class="label">Ваш баланс</div>
+    <div class="balance-value">
+      <span id="balance">0,00</span>
+      <svg viewBox="0 0 24 24" fill="var(--accent)"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.2 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8L12 2z"/></svg>
+    </div>
+    <div class="balance-sub">≈ <span id="balanceUsd">0,00</span> $ по курсу 1 звезда ≈ 0,02 $</div>
+    <div class="mini-row">
+      <div class="mini"><b>0,01</b><span>за клик</span></div>
+      <div class="mini"><b id="refs">0</b><span>рефералов</span></div>
+      <div class="mini"><b>25</b><span>мин. вывод</span></div>
+    </div>
+  </div>
+
+  <div class="clicker-area">
+    <button id="starBtn" aria-label="Заработать звезду">
+      <svg viewBox="0 0 24 24"><defs><radialGradient id="g1" cx="35%" cy="30%" r="80%"><stop offset="0%" stop-color="#ffe3a1"/><stop offset="55%" stop-color="#f5b942"/><stop offset="100%" stop-color="#c98a1e"/></radialGradient></defs><path fill="url(#g1)" d="M12 1.5l3.1 6.7 7.3.85-5.4 5 1.5 7.2L12 17.6l-6.5 3.65 1.5-7.2-5.4-5 7.3-.85L12 1.5z"/></svg>
+    </button>
+    <div class="click-hint">Нажимайте на звезду, чтобы заработать</div>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-primary" id="withdrawBtn" disabled>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+      Вывести
+    </button>
+    <button class="btn btn-ghost" onclick="openSheet('ref')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M2 21v-1a7 7 0 0 1 14 0v1"/><path d="M16 3.5a4 4 0 0 1 0 7"/><path d="M22 21v-1a7 7 0 0 0-4-6.3"/></svg>
+      Пригласить
+    </button>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Как это работает</div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div><b>Кликайте</b><p>Каждое нажатие на звезду приносит 0,01 звёзд на баланс.</p></div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div><b>Приглашайте друзей</b><p>За каждого друга, зарегистрировавшегося по вашей ссылке, — 5 звёзд.</p></div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div><b>Выводите</b><p>Накопите 25 звёзд и выведите их на свой аккаунт Telegram.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    StarClicker не связан с Telegram FZ-LLC. Stars — виртуальная валюта платформы Telegram.<br>
+    Выплаты обрабатываются в течение 24 часов.
+  </footer>
+</div>
+
+<!-- Withdraw sheet -->
+<div class="overlay" id="sheet-withdraw">
+  <div class="sheet">
+    <div class="sheet-head">
+      <h2>Вывод звёзд</h2>
+      <button class="sheet-x" onclick="closeSheets()">&times;</button>
+    </div>
+    <p>Заявка будет обработана в течение 24 часов. Звёзды придут подарками на указанный аккаунт.</p>
+    <div class="withdraw-summary">
+      <span>Доступно к выводу</span>
+      <b><span id="wdBalance">0,00</span> ⭐</b>
+    </div>
+    <div class="field">
+      <label for="tgUser">Username в Telegram</label>
+      <input id="tgUser" placeholder="@username" autocomplete="off" spellcheck="false">
+      <div class="field-hint">Убедитесь, что аккаунт открыт для получения подарков.</div>
+    </div>
+    <div class="form-error" id="wdError"></div>
+    <button class="btn btn-primary" style="width:100%" id="wdSubmit" onclick="doWithdraw()">Создать заявку</button>
+  </div>
+</div>
+
+<!-- Referral sheet -->
+<div class="overlay" id="sheet-ref">
+  <div class="sheet">
+    <div class="sheet-head">
+      <h2>Пригласить друзей</h2>
+      <button class="sheet-x" onclick="closeSheets()">&times;</button>
+    </div>
+    <p>Отправьте эту ссылку друзьям. За каждого нового пользователя вы получите 5 звёзд.</p>
+    <div class="field">
+      <label>Ваша ссылка</label>
+      <div class="ref-box">
+        <input id="refLink" readonly>
+        <button class="btn btn-primary" style="padding:12px 16px" onclick="copyRef()">Копировать</button>
+      </div>
+    </div>
+    <button class="btn btn-ghost" style="width:100%" onclick="shareRef()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
+      Поделиться
+    </button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  const CLICK_VALUE = 0.01;
+  const REF_BONUS = 5;
+  const MIN_WITHDRAW = 25;
+  const STAR_USD = 0.02;
+
+  let balance = 0;
+  let refs = 0;
+  let currentUser = null;
+
+  // ---------- Telegram auth ----------
+  const tg = window.Telegram && window.Telegram.WebApp;
+  const VALID_BOT_TOKEN_HASH_CHECK = true; // server-side only in production
+
+  function isTgEnv() {
+    return !!(tg && (tg.initData || tg.initDataUnsafe && tg.initDataUnsafe.user));
+  }
+
+  function initTelegram() {
+    if (tg) {
+      try { tg.expand(); tg.setHeaderColor && tg.setHeaderColor('#0d0e14'); tg.setBackgroundColor && tg.setBackgroundColor('#0d0e14'); } catch (e) {}
+    }
+    const stored = localStorage.getItem('sc_user');
+    if (stored) {
+      currentUser = JSON.parse(stored);
+      return onLogin(currentUser);
+    }
+    if (isTgEnv()) {
+      // opened inside Telegram (Mini App / WebApp): auto-login with initData
+      const u = tg.initDataUnsafe && tg.initDataUnsafe.user;
+      if (u) {
+        // in production, tg.initData must be verified on the backend!
+        login({ id: u.id, first_name: u.first_name, username: u.username, photo_url: u.photo_url });
+        return;
+      }
+    }
+    // browser fallback: Telegram Login Widget is loaded on button click
+  }
+
+  function loadLoginWidget() {
+    if (document.getElementById('tg-login-script')) return;
+    const s = document.createElement('script');
+    s.id = 'tg-login-script';
+    s.src = 'https://telegram.org/js/telegram-widget.js?22';
+    s.async = true;
+    s.setAttribute('data-telegram-login', 'YourBotName'); // TODO: заменить на реального бота
+    s.setAttribute('data-size', 'large');
+    s.setAttribute('data-radius', '12');
+    s.setAttribute('data-userpic', 'true');
+    s.setAttribute('data-request-access', 'write');
+    s.setAttribute('data-onauth', 'onTelegramAuth(user)');
+    document.getElementById('tgWidgetWrap').appendChild(s);
+  }
+
+  function onTelegramAuth(user) {
+    document.getElementById('tgLoading').classList.remove('visible');
+    if (!user || !user.id) { toast('Не удалось авторизоваться', null); return; }
+    login(user);
+  }
+  window.onTelegramAuth = onTelegramAuth;
+
+  function login(user) {
+    currentUser = user;
+    localStorage.setItem('sc_user', JSON.stringify(user));
+    // load per-user state
+    balance = parseFloat(localStorage.getItem('sc_balance_' + user.id) || '0');
+    refs = parseInt(localStorage.getItem('sc_refs_' + user.id) || '0');
+    onLogin(user);
+  }
+
+  function onLogin(user) {
+    document.getElementById('loginScreen').classList.remove('visible');
+    document.getElementById('app').classList.remove('locked');
+    // header chip
+    const name = (user.first_name || '') + ' ' + (user.last_name || '');
+    document.getElementById('tgName').textContent = user.username ? '@' + user.username : name.trim();
+    document.getElementById('tgUserChip').classList.add('visible');
+    document.getElementById('tgBadge').style.display = 'none';
+    const av = document.getElementById('tgAvatar');
+    if (user.photo_url) {
+      av.outerHTML = '<img id="tgAvatar" src="' + user.photo_url + '" alt="">';
+    } else {
+      av.textContent = (user.first_name || '?').trim().charAt(0).toUpperCase();
+    }
+    render();
+    applyPendingRef();
+  }
+
+  document.getElementById('tgLoginBtn').addEventListener('click', function(){
+    document.getElementById('tgLoading').classList.add('visible');
+    loadLoginWidget();
+  });
+
+  // ---------- state ----------
+
+  function save() {
+    if (!currentUser) return;
+    localStorage.setItem('sc_balance_' + currentUser.id, String(balance));
+    localStorage.setItem('sc_refs_' + currentUser.id, String(refs));
+  }
+
+  function fmt(n) {
+    return n.toFixed(2).replace('.', ',');
+  }
+
+  function render() {
+    document.getElementById('balance').textContent = fmt(balance);
+    document.getElementById('balanceUsd').textContent = fmt(balance * STAR_USD);
+    document.getElementById('refs').textContent = refs;
+    document.getElementById('wdBalance').textContent = fmt(balance);
+    const btn = document.getElementById('withdrawBtn');
+    btn.disabled = balance < MIN_WITHDRAW;
+    document.getElementById('refLink').value = buildRefUrl();
+  }
+
+  function buildRefUrl() {
+    const clean = location.origin + location.pathname;
+    return clean + '?ref=' + getRefCode();
+  }
+
+  function getRefCode() {
+    let code = localStorage.getItem('sc_refcode_' + (currentUser ? currentUser.id : 'anon'));
+    if (!code) {
+      code = Math.random().toString(36).slice(2, 10);
+      if (currentUser) localStorage.setItem('sc_refcode_' + currentUser.id, code);
+    }
+    return code;
+  }
+
+  // referral attribution (pending until the invitee logs in)
+  const refBy = new URLSearchParams(location.search).get('ref');
+  if (refBy) localStorage.setItem('sc_pending_ref', refBy);
+
+  function applyPendingRef() {
+    const pending = localStorage.getItem('sc_pending_ref');
+    if (pending && currentUser && pending !== getRefCode()) {
+      localStorage.setItem('sc_refedby_' + currentUser.id, pending);
+      // демо-режим: бонус начисляется пригласившему локально
+      const inviterBal = parseFloat(localStorage.getItem('sc_balance_' + pending) || '0');
+      const inviterRefs = parseInt(localStorage.getItem('sc_refs_' + pending) || '0');
+      localStorage.setItem('sc_balance_' + pending, String(inviterBal + REF_BONUS));
+      localStorage.setItem('sc_refs_' + pending, String(inviterRefs + 1));
+      localStorage.removeItem('sc_pending_ref');
+      setTimeout(() => toast('Реферальная награда отправлена вашему пригласившему', 'success'), 600);
+    }
+  }
+
+  function toast(msg, type) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'show' + (type ? ' ' + type : '');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => t.className = '', 2800);
+  }
+
+  // clicker
+  const starBtn = document.getElementById('starBtn');
+  starBtn.addEventListener('click', (e) => {
+    balance += CLICK_VALUE;
+    save();
+    render();
+    const pop = document.createElement('div');
+    pop.className = 'pop';
+    pop.textContent = '+' + CLICK_VALUE.toFixed(2).replace('.', ',');
+    pop.style.left = (e.clientX - 14) + 'px';
+    pop.style.top = (e.clientY - 28) + 'px';
+    document.body.appendChild(pop);
+    setTimeout(() => pop.remove(), 700);
+  });
+
+  // sheets
+  function openSheet(name) {
+    document.getElementById('sheet-' + name).classList.add('open');
+    if (name === 'withdraw') document.getElementById('wdError').textContent = '';
+  }
+  function closeSheets() {
+    document.querySelectorAll('.overlay').forEach(o => o.classList.remove('open'));
+  }
+  document.querySelectorAll('.overlay').forEach(o =>
+    o.addEventListener('click', e => { if (e.target === o) closeSheets(); })
+  );
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheets(); });
+
+  document.getElementById('withdrawBtn').addEventListener('click', () => openSheet('withdraw'));
+
+  function copyRef() {
+    const val = document.getElementById('refLink').value;
+    navigator.clipboard.writeText(val)
+      .then(() => toast('Ссылка скопирована', 'success'))
+      .catch(() => toast('Не удалось скопировать, выделите текст вручную'));
+  }
+
+  function shareRef() {
+    const url = document.getElementById('refLink').value;
+    if (navigator.share) {
+      navigator.share({ title: 'StarClicker', text: 'Зарабатывай Telegram Stars вместе со мной:', url }).catch(() => {});
+    } else {
+      copyRef();
+    }
+  }
+
+  function doWithdraw() {
+    const err = document.getElementById('wdError');
+    const user = document.getElementById('tgUser').value.trim();
+    if (balance < MIN_WITHDRAW) {
+      err.textContent = 'Минимальная сумма вывода — 25 звёзд. Накопите ещё ' + fmt(MIN_WITHDRAW - balance) + ' ⭐';
+      return;
+    }
+    if (!/^@[a-zA-Z0-9_]{4,32}$/.test(user)) {
+      err.textContent = 'Введите корректный username, например @username';
+      return;
+    }
+    balance = 0;
+    save();
+    render();
+    closeSheets();
+    toast('Заявка на вывод на ' + user + ' создана', 'success');
+  }
+
+  // ---------- boot ----------
+  document.getElementById('loginScreen').classList.add('visible');
+  initTelegram();
+  if (isTgEnv()) document.getElementById('tgLoginBtn').disabled = false;
+</script>
+</body>
+</html>
